@@ -103,6 +103,24 @@ apt_package_check_list=(
 	#Mailcatcher requirement
 	libsqlite3-dev
 
+	# Required to install nghttp2
+	binutils
+	autoconf
+	automake
+	autotools-dev
+	libtool
+	pkg-config
+	zlib1g-dev
+	libcunit1-dev
+	libssl-dev
+	libxml2-dev
+	libev-dev
+	libevent-dev
+	libjansson-dev
+	libjemalloc-dev
+	python3.4-dev
+	g++-mingw-w64-i686
+	python3-setuptools
 )
 
 echo "Check for apt packages to install..."
@@ -267,11 +285,41 @@ fi
 if [[ ! -e /etc/nginx/server.csr ]]; then
 	echo "Generate Certificate Signing Request (CSR)..."
 	openssl req -new -batch -key /etc/nginx/server.key -out /etc/nginx/server.csr
+	# openssl req -new -key server.key -out server.csr
 fi
 if [[ ! -e /etc/nginx/server.crt ]]; then
 	echo "Sign the certificate using the above private key and CSR..."
 	vvvsigncert="$(openssl x509 -req -days 365 -in /etc/nginx/server.csr -signkey /etc/nginx/server.key -out /etc/nginx/server.crt 2>&1)"
 	echo "$vvvsigncert"
+fi
+
+echo -e "\nSetup nghttpx..."
+
+# Install nghttp2 from source
+if ! hash nghttpx 2>/dev/null; then
+	sudo easy_install3 pip
+	sudo pip3.4 install -U cython
+	git clone https://github.com/tatsuhiro-t/nghttp2.git /usr/local/src/nghttp2
+	cd /usr/local/src/nghttp2
+	autoreconf -i
+	automake
+	autoconf
+	./configure PYTHON=/usr/bin/python3
+	make
+	make install
+	sudo updatedb
+	ln -s /usr/local/lib/libnghttp2.so.14 /lib/x86_64-linux-gnu/libnghttp2.so.14
+	ln -s /usr/local/lib/libnghttp2.so.14.0.8 /lib/x86_64-linux-gnu/libnghttp2.so.14.0.8
+	ldconfig
+
+	# Make the bundled init.d script available to use with `service`.
+	cp /srv/config/nghttpx-config/nghttpx-init /etc/init.d/nghttpx
+	mkdir /etc/nghttpx
+
+	# Copy in our custom configuration file for the service.
+	cp /srv/config/nghttpx-config/nghttpx.conf /etc/nghttpx/nghttpx.conf
+	mkdir /var/log/nghttpx
+	touch /var/log/nghttpx/access.log /var/log/nghttpx/error.log
 fi
 
 echo -e "\nSetup configuration files..."
@@ -341,7 +389,7 @@ if [[ -f /srv/config/bash_prompt ]]; then
 fi
 
 # Mailcatcher
-# 
+#
 # Installs mailcatcher using RVM. RVM allows us to install the
 # current version of ruby and all mailcatcher dependencies reliably.
 rvm_version="$(/usr/bin/env rvm --silent --version 2>&1 | grep 'rvm ' | cut -d " " -f 2)"
@@ -357,7 +405,7 @@ else
 	# Signatures introduced in 1.26.0
 	gpg -q --no-tty --batch --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys D39DC0E3
 	gpg -q --no-tty --batch --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys BF04FF17
-	
+
 	printf " * RVM [not installed]\n Installing from source"
 	curl --silent -L https://get.rvm.io | sudo bash -s stable --ruby
 	source /usr/local/rvm/scripts/rvm
@@ -380,7 +428,7 @@ if [[ -f /etc/init/mailcatcher.conf ]]; then
 	echo " *" Mailcatcher upstart already configured.
 else
 	cp /srv/config/init/mailcatcher.conf  /etc/init/mailcatcher.conf
-	echo " * Copied /srv/config/init/mailcatcher.conf    to /etc/init/mailcatcher.conf"	
+	echo " * Copied /srv/config/init/mailcatcher.conf    to /etc/init/mailcatcher.conf"
 fi
 
 if [[ -f /etc/php5/mods-available/mailcatcher.ini ]]; then
@@ -395,6 +443,7 @@ fi
 #
 # Make sure the services we expect to be running are running.
 echo -e "\nRestart services..."
+service nghttpx restart
 service nginx restart
 service memcached restart
 service mailcatcher restart
