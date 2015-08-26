@@ -314,9 +314,10 @@ if ! hash nghttpx 2>/dev/null; then
 
 	# Make the bundled init.d script available to use with `service`.
 	cp /srv/config/nghttpx-config/nghttpx-init /etc/init.d/nghttpx
-	mkdir /etc/nghttpx
+	chmod 755 /etc/init.d/nghttpx
 
 	# Copy in our custom configuration file for the service.
+	mkdir /etc/nghttpx
 	cp /srv/config/nghttpx-config/nghttpx.conf /etc/nghttpx/nghttpx.conf
 	mkdir /var/log/nghttpx
 	touch /var/log/nghttpx/access.log /var/log/nghttpx/error.log
@@ -617,10 +618,17 @@ if ( isset( \$_SERVER['HTTP_HOST'] ) && preg_match('/^(local.wordpress.)\d{1,3}\
 	define( 'WP_SITEURL', 'http://' . \$_SERVER['HTTP_HOST'] );
 }
 
+/**
+ * Something like this is required because NGINX is running over HTTP behind
+ * an HTTPS proxy. See trac tickets #9235, #19654, #31288.
+ */
+if ( 'https' == $_SERVER['HTTP_X_FORWARDED_PROTO'] )
+   $_SERVER['HTTPS'] = 'on';
+
 define( 'WP_DEBUG', true );
 PHP
 		echo "Installing WordPress Stable..."
-		wp core install --url=local.wordpress.dev --quiet --title="Local WordPress Dev" --admin_name=admin --admin_email="admin@local.dev" --admin_password="password"
+		wp core install --url=https://local.wordpress.dev --quiet --title="Local WordPress Dev" --admin_name=admin --admin_email="admin@local.dev" --admin_password="password"
 	else
 		echo "Updating WordPress Stable..."
 		cd /srv/www/wordpress-default
@@ -649,10 +657,17 @@ if ( isset( \$_SERVER['HTTP_HOST'] ) && preg_match('/^(local.wordpress-trunk.)\d
 	define( 'WP_SITEURL', 'http://' . \$_SERVER['HTTP_HOST'] );
 }
 
+/**
+ * Something like this is required because NGINX is running over HTTP behind
+ * an HTTPS proxy. See trac tickets #9235, #19654, #31288.
+ */
+if ( 'https' == $_SERVER['HTTP_X_FORWARDED_PROTO'] )
+   $_SERVER['HTTPS'] = 'on';
+
 define( 'WP_DEBUG', true );
 PHP
 		echo "Installing WordPress trunk..."
-		wp core install --url=local.wordpress-trunk.dev --quiet --title="Local WordPress Trunk Dev" --admin_name=admin --admin_email="admin@local.dev" --admin_password="password"
+		wp core install --url=https://local.wordpress-trunk.dev --quiet --title="Local WordPress Trunk Dev" --admin_name=admin --admin_email="admin@local.dev" --admin_password="password"
 	else
 		echo "Updating WordPress trunk..."
 		cd /srv/www/wordpress-trunk
@@ -676,10 +691,17 @@ if ( isset( \$_SERVER['HTTP_HOST'] ) && preg_match('/^(src|build)(.wordpress-dev
 	define( 'WP_SITEURL', 'http://build.wordpress-develop.dev' );
 }
 
+/**
+ * Something like this is required because NGINX is running over HTTP behind
+ * an HTTPS proxy. See trac tickets #9235, #19654, #31288.
+ */
+if ( 'https' == $_SERVER['HTTP_X_FORWARDED_PROTO'] )
+   $_SERVER['HTTPS'] = 'on';
+
 define( 'WP_DEBUG', true );
 PHP
 		echo "Installing WordPress develop..."
-		wp core install --url=src.wordpress-develop.dev --quiet --title="WordPress Develop" --admin_name=admin --admin_email="admin@local.dev" --admin_password="password"
+		wp core install --url=https://src.wordpress-develop.dev --quiet --title="WordPress Develop" --admin_name=admin --admin_email="admin@local.dev" --admin_password="password"
 		cp /srv/config/wordpress-config/wp-tests-config.php /srv/www/wordpress-develop/
 		cd /srv/www/wordpress-develop/
 		echo "Running npm install for the first time, this may take several minutes..."
