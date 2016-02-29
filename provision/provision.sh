@@ -646,10 +646,10 @@ wpsvn_check() {
 }
 
 wordpress_trunk() {
-  # Checkout, install and configure WordPress trunk via core.svn
+  # Clone, install and configure WordPress trunk.
   if [[ ! -d "/srv/www/wordpress-trunk" ]]; then
-    echo "Checking out WordPress trunk from core.svn, see https://core.svn.wordpress.org/trunk"
-    svn checkout "https://core.svn.wordpress.org/trunk/" "/srv/www/wordpress-trunk"
+    echo "Checking out WordPress trunk from git://core.git.wordpress.org/"
+    git clone --depth 1 "git://core.git.wordpress.org/" "/srv/www/wordpress-trunk"
     cd /srv/www/wordpress-trunk
     echo "Configuring WordPress trunk..."
     noroot wp core config --dbname=wordpress_trunk --dbuser=wp --dbpass=wp --quiet --extra-php <<PHP
@@ -671,10 +671,10 @@ PHP
 }
 
 wordpress_develop(){
-  # Checkout, install and configure WordPress trunk via develop.svn
+  # Clone, install and configure WordPress trunk.
   if [[ ! -d "/srv/www/wordpress-develop" ]]; then
-    echo "Checking out WordPress trunk from develop.svn, see https://develop.svn.wordpress.org/trunk"
-    svn checkout "https://develop.svn.wordpress.org/trunk/" "/srv/www/wordpress-develop"
+    echo "Checking out WordPress trunk from git://develop.git.wordpress.org/"
+    git clone --depth 1 "git://develop.git.wordpress.org/" "/srv/www/wordpress-develop"
     cd /srv/www/wordpress-develop/src/
     echo "Configuring WordPress develop..."
     noroot wp core config --dbname=wordpress_develop --dbuser=wp --dbpass=wp --quiet --extra-php <<PHP
